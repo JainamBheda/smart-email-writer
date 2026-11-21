@@ -14,6 +14,22 @@ The app is built for fast local development: one backend command, one frontend c
 - Extension settings popup for backend URL and default tone (stored in `chrome.storage.sync`).
 - Validated requests, structured JSON errors, request timeouts, and 9 backend tests.
 
+## Screenshots
+
+Captured from the app running locally (backend on `:8080`, Vite on `:5173`).
+
+**Web UI — empty state**
+
+![Smart Email Writer web UI empty state](docs/screenshots/web-ui-empty.png)
+
+**Web UI — generated reply**
+
+![Smart Email Writer web UI with a generated reply](docs/screenshots/generated-reply.png)
+
+**Gmail extension — settings popup**
+
+![Smart Email Writer Chrome extension settings popup](docs/screenshots/extension-settings.png)
+
 ## Tech stack
 
 | Layer | Technology |
@@ -32,7 +48,8 @@ smart-email-writer/
 │   └── src/main/java/com/smartemail/writer
 ├── frontend/           React + Vite web UI
 │   └── src/api/emailApi.js
-└── chrome-extension/   Gmail "AI Reply" extension
+├── chrome-extension/   Gmail "AI Reply" extension
+└── docs/screenshots/   Images used in this README
 ```
 
 ## Quick start
