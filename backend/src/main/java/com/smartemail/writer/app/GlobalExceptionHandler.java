@@ -27,8 +27,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GeminiApiException.class)
     public ResponseEntity<ApiError> handleGemini(GeminiApiException ex) {
+        String detail = ex.getStatusCode().value() == 429
+                ? "Free-tier quota or rate limit reached. Wait and try again, or use a different key."
+                : "Check GEMINI_API_KEY and the configured model URL.";
         return ResponseEntity.status(ex.getStatusCode())
-                .body(ApiError.of(ex.getMessage(), "Check GEMINI_API_KEY and the configured model URL."));
+                .body(ApiError.of(ex.getMessage(), detail));
     }
 
     @ExceptionHandler(WebClientException.class)

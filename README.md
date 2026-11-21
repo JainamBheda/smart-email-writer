@@ -127,10 +127,10 @@ Backend (`backend\.env.example`):
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | empty | Required for generation |
-| `GEMINI_API_URL` | Gemini 3.6 Flash `generateContent` endpoint | Key is appended automatically |
+| `GEMINI_API_URL` | Gemini 3.5 Flash Lite `generateContent` endpoint | Key is appended automatically |
 | `PORT` | `8080` | Server port |
 | `CORS_ALLOWED_ORIGINS` | Vite dev origins | Comma-separated origins |
-| `GEMINI_CONNECT_TIMEOUT_MS` / `GEMINI_RESPONSE_TIMEOUT_MS` | `5000` / `60000` | HTTP timeouts |
+| `GEMINI_CONNECT_TIMEOUT_MS` / `GEMINI_RESPONSE_TIMEOUT_MS` | `5000` / `30000` | HTTP timeouts |
 
 Frontend (`frontend\.env.example`):
 

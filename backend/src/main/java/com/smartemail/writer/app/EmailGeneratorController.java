@@ -22,7 +22,10 @@ public class EmailGeneratorController {
 
     @PostMapping("/generate")
     public ResponseEntity<String> generateEmail(@Valid @RequestBody EmailRequest emailRequest) {
-        return ResponseEntity.ok(emailGeneratorService.generateEmailReply(emailRequest));
+        EmailGeneratorService.ReplyResult result = emailGeneratorService.generate(emailRequest);
+        return ResponseEntity.ok()
+                .header("X-Cache", result.fromCache() ? "HIT" : "MISS")
+                .body(result.text());
     }
 
     @GetMapping("/health")

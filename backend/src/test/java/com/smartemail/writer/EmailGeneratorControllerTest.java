@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -33,12 +34,14 @@ class EmailGeneratorControllerTest {
 
     @Test
     void generatesReplyForValidRequest() throws Exception {
-        when(emailGeneratorService.generateEmailReply(any(EmailRequest.class))).thenReturn("Thanks for your note.");
+        when(emailGeneratorService.generate(any(EmailRequest.class)))
+                .thenReturn(new EmailGeneratorService.ReplyResult("Thanks for your note.", false));
 
         mockMvc.perform(post("/api/email/generate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new EmailRequest("Please confirm the date.", "friendly"))))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Cache", "MISS"))
                 .andExpect(content().string("Thanks for your note."));
     }
 

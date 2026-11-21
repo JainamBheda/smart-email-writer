@@ -6,11 +6,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientException;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+import reactor.util.retry.Retry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -61,7 +66,7 @@ class EmailGeneratorServiceTest {
 
         assertTrue(casual.contains("Use a casual tone throughout the entire reply."));
         assertFalse(casual.contains("professional"));
-        assertTrue(professional.contains("Use a professional tone throughout the entire reply."));
+        assertTrue(professional.contains("Use a professional tone: formal, polite and neutral"));
         assertTrue(defaultTone.contains("Use a professional tone."));
         assertNotEquals(casual, professional);
     }
@@ -109,7 +114,53 @@ class EmailGeneratorServiceTest {
                 () -> service.generateEmailReply(new EmailRequest("Hello", null)));
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
-        assertTrue(ex.getMessage().contains("Quota exceeded"));
+        assertTrue(ex.getMessage().contains("rate limit"));
+    }
+
+    @Test
+    void cachesIdenticalEmailAndTone() {
+        AtomicInteger calls = new AtomicInteger();
+        WebClient webClient = WebClient.builder()
+                .exchangeFunction(request -> {
+                    calls.incrementAndGet();
+                    return Mono.just(jsonResponse(HttpStatus.OK,
+                            "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"cached reply\"}]}}]}"));
+                })
+                .build();
+        EmailGeneratorService service = new EmailGeneratorService(
+                webClient, URL, KEY, new EmailReplyCache(), Retry.max(0));
+
+        EmailRequest request = new EmailRequest("Hello", "friendly");
+        EmailGeneratorService.ReplyResult first = service.generate(request);
+        EmailGeneratorService.ReplyResult second = service.generate(request);
+        service.generate(new EmailRequest("Hello", "professional"));
+
+        assertFalse(first.fromCache());
+        assertTrue(second.fromCache());
+        assertEquals(2, calls.get());
+    }
+
+    @Test
+    void retriesTransientGeminiErrors() {
+        AtomicInteger calls = new AtomicInteger();
+        WebClient webClient = WebClient.builder()
+                .exchangeFunction(request -> {
+                    if (calls.incrementAndGet() == 1) {
+                        return Mono.just(jsonResponse(HttpStatus.TOO_MANY_REQUESTS,
+                                "{\"error\":{\"message\":\"busy\"}}"));
+                    }
+                    return Mono.just(jsonResponse(HttpStatus.OK,
+                            "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"}]}}]}"));
+                })
+                .build();
+        Retry retry = Retry.backoff(1, Duration.ofMillis(1))
+                .filter(failure -> failure instanceof GeminiApiException
+                        || failure instanceof WebClientException);
+        EmailGeneratorService service = new EmailGeneratorService(
+                webClient, URL, KEY, new EmailReplyCache(), retry);
+
+        assertEquals("ok", service.generateEmailReply(new EmailRequest("Hello", "friendly")));
+        assertEquals(2, calls.get());
     }
 
     private static EmailGeneratorService serviceResponding(HttpStatus status, String body) {
