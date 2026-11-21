@@ -9,9 +9,12 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,6 +48,35 @@ class EmailGeneratorServiceTest {
         service.generateEmailReply(new EmailRequest("Hello", "casual"));
 
         assertEquals(URI.create(URL + KEY), calledUrl.get());
+    }
+
+    @Test
+    void toneIsAppliedWithoutConflictingProfessionalInstruction() {
+        EmailGeneratorService service = new EmailGeneratorService(
+                WebClient.builder().build(), URL, KEY);
+
+        String casual = service.buildPrompt(new EmailRequest("Same email", "casual"));
+        String professional = service.buildPrompt(new EmailRequest("Same email", "professional"));
+        String defaultTone = service.buildPrompt(new EmailRequest("Same email", null));
+
+        assertTrue(casual.contains("Use a casual tone throughout the entire reply."));
+        assertFalse(casual.contains("professional"));
+        assertTrue(professional.contains("Use a professional tone throughout the entire reply."));
+        assertTrue(defaultTone.contains("Use a professional tone."));
+        assertNotEquals(casual, professional);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void requestEnablesVariedGeneration() {
+        EmailGeneratorService service = new EmailGeneratorService(
+                WebClient.builder().build(), URL, KEY);
+
+        Map<String, Object> body = service.buildRequestBody(new EmailRequest("Hello", "friendly"));
+        Map<String, Object> config = (Map<String, Object>) body.get("generationConfig");
+
+        assertTrue(config.containsKey("temperature"));
+        assertTrue(((Number) config.get("temperature")).doubleValue() > 0);
     }
 
     @Test

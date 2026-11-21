@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Box,
@@ -21,6 +21,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import EmailIcon from '@mui/icons-material/Email'
 import { checkHealth, describeApiError, generateReply } from './api/emailApi'
+import { copyText } from './utils/clipboard'
 import './App.css'
 
 const TONES = [
@@ -37,10 +38,13 @@ function App() {
   const [emailContent, setEmailContent] = useState('')
   const [tone, setTone] = useState('')
   const [generatedReply, setGeneratedReply] = useState('')
+  const [replyTone, setReplyTone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [copied, setCopied] = useState(false)
   const [apiOnline, setApiOnline] = useState(null)
+  const replyRef = useRef(null)
 
   useEffect(() => {
     checkHealth()
@@ -58,14 +62,29 @@ function App() {
     if (!emailContent.trim() || loading) return
     setLoading(true)
     setError('')
+    setInfo('')
     setCopied(false)
     try {
       setGeneratedReply(await generateReply({ emailContent, tone }))
+      setReplyTone(tone)
     } catch (err) {
       setGeneratedReply('')
+      setReplyTone('')
       setError(describeApiError(err))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToneChange = (event) => {
+    const nextTone = event.target.value
+    setTone(nextTone)
+    if (generatedReply && nextTone !== replyTone) {
+      setGeneratedReply('')
+      setReplyTone('')
+      setCopied(false)
+      setError('')
+      setInfo('Tone changed — generate a new reply for this tone.')
     }
   }
 
@@ -73,17 +92,21 @@ function App() {
     setEmailContent('')
     setTone('')
     setGeneratedReply('')
+    setReplyTone('')
     setError('')
+    setInfo('')
     setCopied(false)
   }
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedReply)
+    if (await copyText(generatedReply)) {
+      setError('')
       setCopied(true)
-    } catch {
-      setError('Clipboard access was blocked. Select the text and copy it manually.')
+      return
     }
+    replyRef.current?.focus()
+    replyRef.current?.select()
+    setError('Copy was blocked by the browser. The reply is selected — press Ctrl + C to copy.')
   }
 
   return (
@@ -144,7 +167,7 @@ function App() {
 
             <FormControl fullWidth disabled={loading}>
               <InputLabel id="tone-label">Tone</InputLabel>
-              <Select labelId="tone-label" id="tone" value={tone} label="Tone" onChange={(event) => setTone(event.target.value)}>
+              <Select labelId="tone-label" id="tone" value={tone} label="Tone" onChange={handleToneChange}>
                 {TONES.map((option) => (
                   <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
                 ))}
@@ -169,7 +192,12 @@ function App() {
 
           <Paper elevation={0} className="panel output-panel">
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-              <Typography variant="h6" component="h3">Generated reply</Typography>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="h6" component="h3">Generated reply</Typography>
+                {generatedReply && (
+                  <Chip size="small" variant="outlined" label={`Tone: ${replyTone || 'default'}`} />
+                )}
+              </Stack>
               {generatedReply && (
                 <Button
                   size="small"
@@ -183,6 +211,7 @@ function App() {
             </Stack>
 
             {error && <Alert severity="error" className="alert">{error}</Alert>}
+            {info && <Alert severity="info" className="alert">{info}</Alert>}
 
             {generatedReply ? (
               <TextField
@@ -192,6 +221,7 @@ function App() {
                 variant="outlined"
                 label="Reply"
                 value={generatedReply}
+                inputRef={replyRef}
                 InputProps={{ readOnly: true }}
               />
             ) : (

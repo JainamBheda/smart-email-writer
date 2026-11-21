@@ -12,7 +12,9 @@ The app is built for fast local development: one backend command, one frontend c
 - Inline API health indicator and clear error messages when the backend is offline or the API key is missing.
 - Gmail extension injects an **AI Reply** button into the compose toolbar and inserts the reply into the compose box.
 - Extension settings popup for backend URL and default tone (stored in `chrome.storage.sync`).
-- Validated requests, structured JSON errors, request timeouts, and 9 backend tests.
+- Validated requests, structured JSON errors, request timeouts, and 11 backend tests.
+- Tone selection is applied explicitly in the Gemini prompt, with a visible tone badge and stale-reply protection in the UI.
+- Copy uses the Clipboard API with an automatic fallback when the browser blocks it.
 
 ## Screenshots
 
@@ -140,7 +142,7 @@ Frontend (`frontend\.env.example`):
 
 ```powershell
 cd backend
-.\mvnw.cmd test        # 9 tests: controller, validation, service, error paths
+.\mvnw.cmd test        # 11 tests: controller, validation, prompt/tone, service, error paths
 
 cd ..\frontend
 npm run build          # production bundle
@@ -152,6 +154,8 @@ npm run lint           # ESLint
 - **"GEMINI_API_KEY is not configured"** — add the key to `backend\.env` and restart the backend.
 - **"API offline" / "Cannot reach the backend"** — make sure the backend is running and the URL matches.
 - **CORS error** — add your frontend origin to `CORS_ALLOWED_ORIGINS` and restart.
+- **"Copy was blocked by the browser"** — if both copy methods are denied, the reply text is selected automatically; press `Ctrl + C`.
+- **Same reply for a different tone** — change the tone and generate again; changing the tone clears the stale reply, and the badge next to "Generated reply" shows which tone produced it.
 - **No AI Reply button** — reload the extension and hard-refresh Gmail.
 - **Java release error** — use JDK 21.
 

@@ -52,8 +52,7 @@ public class EmailGeneratorService {
             throw new GeminiApiException("GEMINI_API_KEY is not configured. Set it before generating replies.");
         }
 
-        Map<String, Object> requestBody = Map.of(
-                "contents", List.of(Map.of("parts", List.of(Map.of("text", buildPrompt(emailRequest))))));
+        Map<String, Object> requestBody = buildRequestBody(emailRequest);
 
         String response;
         try {
@@ -98,13 +97,24 @@ public class EmailGeneratorService {
         }
     }
 
-    private String buildPrompt(EmailRequest emailRequest) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("Write a professional email reply to the message below. ")
-                .append("Do not include a subject line. Return only the reply body.");
-        if (emailRequest.getTone() != null && !emailRequest.getTone().isBlank()) {
-            prompt.append(" Use a ").append(emailRequest.getTone().trim()).append(" tone.");
+    Map<String, Object> buildRequestBody(EmailRequest emailRequest) {
+        return Map.of(
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", buildPrompt(emailRequest))))),
+                "generationConfig", Map.of(
+                        "temperature", 0.9,
+                        "topP", 0.95,
+                        "maxOutputTokens", 1024));
+    }
+
+    String buildPrompt(EmailRequest emailRequest) {
+        String tone = emailRequest.getTone() == null ? "" : emailRequest.getTone().trim();
+        StringBuilder prompt = new StringBuilder("Write an email reply to the message below. ");
+        if (tone.isEmpty()) {
+            prompt.append("Use a professional tone. ");
+        } else {
+            prompt.append("Use a ").append(tone).append(" tone throughout the entire reply. ");
         }
+        prompt.append("Do not include a subject line. Return only the reply body.");
         prompt.append("\n\nOriginal email:\n").append(emailRequest.getEmailContent().trim());
         return prompt.toString();
     }
