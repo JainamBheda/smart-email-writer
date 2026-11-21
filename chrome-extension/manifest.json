@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Email Writer",
+  "short_name": "Smart Reply",
+  "description": "Generate AI email replies inside Gmail using the Smart Email Writer backend.",
+  "version": "1.0.0",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "*://mail.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://mail.google.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Smart Email Writer — settings"
+  }
+}
